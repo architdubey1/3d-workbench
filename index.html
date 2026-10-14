@@ -1,0 +1,635 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3D Workbench</title>
+<meta name="description" content="Archit's 12-week path from Blender beginner to selling 3D jewellery and decor work.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#EEF1F4; --panel:#FFFFFF; --ink:#1C2430; --muted:#5A6676; --grid:#DCE2E9; --line:#CBD3DD;
+  --gold:#B8860B; --gold-soft:#F6EBCB; --teal:#226F6B; --teal-soft:#DDEEED; --focus:#226F6B;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#141920; --panel:#1C232D; --ink:#E6EAF0; --muted:#9AA6B6; --grid:#1F2731; --line:#2E3946;
+    --gold:#E2B84A; --gold-soft:#3A3120; --teal:#6BC0BA; --teal-soft:#1E3534; --focus:#6BC0BA;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#141920; --panel:#1C232D; --ink:#E6EAF0; --muted:#9AA6B6; --grid:#1F2731; --line:#2E3946;
+  --gold:#E2B84A; --gold-soft:#3A3120; --teal:#6BC0BA; --teal-soft:#1E3534; --focus:#6BC0BA;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; color:var(--ink); background-color:var(--paper);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:32px 32px;
+  font-family:"Atkinson Hyperlegible",system-ui,sans-serif; font-size:17px; line-height:1.6;
+}
+h1,h2,h3,h4{font-family:"Familjen Grotesk",system-ui,sans-serif; line-height:1.15; margin:0}
+a{color:var(--teal)}
+:focus-visible{outline:3px solid var(--focus); outline-offset:2px; border-radius:4px}
+button{font:inherit; color:inherit; cursor:pointer}
+
+.shell{max-width:1180px; margin:0 auto; padding:24px 16px 64px; display:grid; grid-template-columns:260px 1fr; gap:28px}
+@media (max-width:860px){ .shell{grid-template-columns:1fr; gap:16px; padding-top:16px} }
+
+/* Hero */
+.hero{grid-column:1/-1; display:grid; grid-template-columns:1fr 300px; align-items:center; gap:24px;
+  background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:28px 32px}
+.hero h1{font-size:clamp(2rem,4.5vw,3.1rem); font-weight:700; letter-spacing:-.02em}
+.hero p{color:var(--muted); max-width:52ch; margin:12px 0 18px}
+.meter{display:flex; align-items:center; gap:12px; max-width:420px}
+.meter-track{flex:1; height:10px; background:var(--grid); border-radius:99px; overflow:hidden}
+.meter-fill{height:100%; width:0; background:var(--gold); border-radius:99px; transition:width .5s ease}
+.meter b{font-family:"Familjen Grotesk",system-ui,sans-serif; font-size:1.05rem; min-width:7ch}
+.ring-stage{height:240px; position:relative}
+.ring-stage canvas{width:100%!important; height:100%!important; display:block}
+.ring-caption{position:absolute; bottom:0; left:0; right:0; text-align:center; font-size:.85rem; color:var(--muted)}
+.theme-btn{background:none; border:1px solid var(--line); border-radius:8px; padding:6px 12px; font-size:.9rem; margin-left:12px}
+@media (max-width:700px){ .hero{grid-template-columns:1fr; padding:22px 18px} .ring-stage{height:190px; order:-1} }
+
+/* Rail */
+.rail{position:sticky; top:16px; align-self:start}
+.phase{margin-bottom:18px}
+.phase h2{font-size:.95rem; color:var(--muted); font-weight:600; margin:0 0 6px 4px}
+.week-btn{display:flex; align-items:center; gap:10px; width:100%; text-align:left; background:none; border:1px solid transparent;
+  border-radius:9px; padding:7px 10px; font-size:.97rem}
+.week-btn:hover{background:var(--panel)}
+.week-btn[aria-current="true"]{background:var(--panel); border-color:var(--line); font-weight:700}
+.dot{flex:none; width:26px; height:26px; border-radius:50%; border:2px solid var(--line); display:grid; place-items:center;
+  font-family:"Familjen Grotesk",system-ui,sans-serif; font-size:.8rem; font-weight:700; background:var(--paper)}
+.week-btn.done .dot{background:var(--gold); border-color:var(--gold); color:#1C2430}
+.week-btn .tag{margin-left:auto; font-size:.75rem; color:var(--muted)}
+.rail-extra{border-top:1px solid var(--line); padding-top:12px}
+@media (max-width:860px){
+  .rail{position:static; display:flex; gap:6px; overflow-x:auto; padding-bottom:6px; scrollbar-width:thin}
+  .phase{display:contents} .phase h2{display:none} .rail-extra{display:contents; border:0; padding:0}
+  .week-btn{flex:none; width:auto; background:var(--panel); border-color:var(--line)}
+  .week-btn .label,.week-btn .tag{display:none}
+  .week-btn.glossary-btn .label{display:inline}
+}
+
+/* Main */
+main{min-width:0}
+.panel{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:26px 30px; margin-bottom:18px}
+@media (max-width:700px){ .panel{padding:20px 18px} }
+.kicker{color:var(--muted); font-size:.95rem}
+.week-title{font-size:clamp(1.6rem,3.4vw,2.2rem); margin:4px 0 12px; letter-spacing:-.01em}
+.idea{border-left:4px solid var(--gold); background:var(--gold-soft); padding:12px 16px; border-radius:0 10px 10px 0; margin:0; max-width:68ch}
+.panel h3{font-size:1.3rem; margin-bottom:14px}
+
+/* Concept stepper */
+.stepper-head{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:14px}
+.pips{display:flex; gap:6px}
+.pip{width:30px; height:6px; border-radius:99px; background:var(--grid); border:0; padding:0}
+.pip.seen{background:var(--teal)}
+.pip[aria-current="true"]{background:var(--gold)}
+.concept h4{font-size:1.45rem; margin-bottom:8px}
+.concept .simple{font-size:1.08rem; max-width:65ch; margin:0 0 12px}
+.analogy{display:flex; gap:10px; background:var(--teal-soft); border-radius:10px; padding:12px 14px; max-width:68ch; margin-bottom:16px}
+.analogy strong{flex:none; color:var(--teal)}
+.try h5{font-family:"Familjen Grotesk",system-ui,sans-serif; font-size:1.05rem; margin:0 0 6px}
+.try ol{margin:0 0 6px; padding-left:22px; max-width:68ch}
+.try li{margin-bottom:6px}
+kbd{font-family:inherit; font-size:.85em; font-weight:700; background:var(--paper); border:1px solid var(--line); border-bottom-width:2px; border-radius:5px; padding:1px 6px; white-space:nowrap}
+pre{background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:12px 14px; overflow-x:auto; font-size:.86rem; line-height:1.5; max-width:100%}
+.stepper-nav{display:flex; gap:10px; justify-content:space-between; align-items:center; margin-top:18px; flex-wrap:wrap}
+@media (max-width:520px){ .stepper-nav .tried{order:-1; width:100%} .stepper-nav .btn{flex:1} }
+.btn{border:1px solid var(--line); background:var(--paper); border-radius:9px; padding:9px 16px; font-weight:700}
+.btn:hover{border-color:var(--ink)}
+.btn.primary{background:var(--ink); color:var(--paper); border-color:var(--ink)}
+.btn[disabled]{opacity:.4; cursor:default}
+.tried{display:flex; align-items:center; gap:8px; font-weight:700}
+.tried input,.check input{width:20px; height:20px; accent-color:var(--gold)}
+
+/* Sessions */
+.sessions{list-style:none; margin:0; padding:0; display:grid; gap:10px}
+.check{display:flex; gap:12px; align-items:flex-start; padding:12px 14px; border:1px solid var(--line); border-radius:10px}
+.check input{margin-top:3px; flex:none}
+.check .when{font-weight:700; min-width:96px}
+.check.win{border-color:var(--gold); background:var(--gold-soft)}
+@media (max-width:520px){ .check{flex-wrap:wrap} .check .when{min-width:0} }
+
+/* Videos */
+.videos{display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px}
+.video{display:block; text-decoration:none; color:inherit; border:1px solid var(--line); border-radius:10px; overflow:hidden; background:var(--paper)}
+.video:hover{border-color:var(--teal)}
+.thumb{aspect-ratio:16/9; background:var(--grid) center/cover no-repeat; display:grid; place-items:center}
+.thumb .pl{font-family:"Familjen Grotesk",system-ui,sans-serif; font-weight:700; color:var(--muted)}
+.video .vt{padding:10px 12px 2px; font-weight:700; font-size:.95rem; line-height:1.35}
+.video .vn{padding:0 12px 12px; font-size:.88rem; color:var(--muted)}
+.note-help{color:var(--muted); font-size:.92rem; margin:-6px 0 12px}
+
+textarea{width:100%; min-height:110px; font:inherit; color:var(--ink); background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:12px}
+.saved{font-size:.85rem; color:var(--muted); height:1.2em}
+
+table{border-collapse:collapse; width:100%}
+td,th{text-align:left; padding:10px 8px; border-bottom:1px solid var(--line); vertical-align:top}
+th{font-family:"Familjen Grotesk"}
+td:first-child{font-weight:700; white-space:nowrap}
+.week-foot{display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap}
+
+@media (prefers-reduced-motion: reduce){ *{transition:none!important} }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="hero">
+    <div>
+      <h1>Archit's 3D Workbench</h1>
+      <p>Twelve weeks from opening Blender for the first time to talking with your first clients. About three hours a week, learned one idea at a time.</p>
+      <div class="meter" aria-label="Overall progress">
+        <div class="meter-track"><div class="meter-fill" id="meterFill"></div></div>
+        <b id="meterText">0 of 12</b>
+      </div>
+      <p style="margin:14px 0 0;font-size:.9rem">Progress saves in this browser. <button class="theme-btn" id="themeBtn" type="button">Switch theme</button></p>
+    </div>
+    <div class="ring-stage" id="ringStage" aria-hidden="true">
+      <div class="ring-caption" id="ringCaption">Your ring turns to gold as you finish weeks</div>
+    </div>
+  </header>
+
+  <nav class="rail" id="rail" aria-label="Weeks"></nav>
+  <main id="main"></main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ---------- Content ---------- */
+const yt = id => ({type:"video", id});
+const PHASES = [
+  {name:"Phase 1 · Learn the machines", weeks:[1,2,3]},
+  {name:"Phase 2 · Your first real pieces", weeks:[4,5,6]},
+  {name:"Phase 3 · Put it on the web", weeks:[7,8,9]},
+  {name:"Phase 4 · Meet the market", weeks:[10,11,12]}
+];
+
+const WEEKS = [
+{n:1, title:"Find your way around", idea:"Like your first day at a new gym: you're learning where the machines are, not lifting heavy. Clumsy is normal and expected.",
+ concepts:[
+  {term:"The 3D viewport", simple:"The big window in the middle of Blender. It's your camera into the 3D world, and you can fly that camera anywhere.",
+   analogy:"Holding a phone camera while walking around a statue. The statue stays still; you move around it.",
+   steps:["Download Blender free from blender.org and open it. You'll see a grey cube.","Hold the <kbd>middle mouse</kbd> button and drag: you orbit around the cube.","Hold <kbd>Shift</kbd> + <kbd>middle mouse</kbd> and drag: you slide sideways (called panning).","Scroll the wheel to zoom. If you're on a laptop trackpad, turn on Edit › Preferences › Input › Emulate 3 Button Mouse."]},
+  {term:"Grab, rotate, scale", simple:"The three basic moves for any object: move it, turn it, resize it. Blender gives each one a single key.",
+   analogy:"Arranging furniture: you push a chair (grab), turn it to face the window (rotate), or swap it for a bigger one (scale).",
+   steps:["Click the cube to select it (orange outline).","Press <kbd>G</kbd> and move the mouse to grab it. Click to drop, right-click to cancel.","Press <kbd>R</kbd> to rotate and <kbd>S</kbd> to scale.","Add a letter to lock a direction: <kbd>G</kbd> then <kbd>Z</kbd> moves only up and down."]},
+  {term:"Render", simple:"The computer turning your 3D scene into a finished picture, with real light and shadows.",
+   analogy:"Developing a photo. The scene is the shoot; the render is the printed photograph.",
+   steps:["Press <kbd>F12</kbd> to render what the camera sees.","In the window that opens, Image › Save As saves the picture.","Your first render will be a grey cube. Save it anyway: it's your 'before' photo."]}
+ ],
+ sessions:[["Tuesday","Install Blender and practise orbit, pan and zoom for 30 minutes."],["Thursday","Practise G, R and S on the cube until it feels automatic."],["Weekend","Start Blender Guru's donut series. Do the first few parts only."]],
+ win:"Your first rendered image, even if it's an ugly donut",
+ videos:[
+  {url:"https://www.youtube.com/playlist?list=PLjEaoINr3zgEPv5y--4MKpciLaoQYZB1Z", title:"Blender Guru: Beginner Donut Tutorial (playlist)", note:"The famous starter series. Do the first few parts this week."},
+  {...yt("z-Xl9tGqH14"), title:"Beginner Blender Tutorial (2026)", note:"A newer beginner walkthrough if you're on the latest Blender."},
+  {...yt("sP98s2lPOu0"), title:"Navigate Blender's 3D viewport 3 ways", note:"Watch on Tuesday before you practise moving around."}
+ ]},
+
+{n:2, title:"Make your own object", idea:"Last week you learned the machines. This week you lift your first real weight: something you designed yourself.",
+ concepts:[
+  {term:"Object mode and Edit mode", simple:"Object mode moves whole objects. Edit mode lets you reshape an object by grabbing its points, edges and faces.",
+   analogy:"Object mode is moving a lump of clay around the table. Edit mode is pressing your thumbs into it.",
+   steps:["Select the cube and press <kbd>Tab</kbd> to enter Edit mode.","Press <kbd>1</kbd>, <kbd>2</kbd> or <kbd>3</kbd> to pick points (vertices), edges or faces.","Select one face and press <kbd>G</kbd>: you're reshaping the cube itself.","Press <kbd>Tab</kbd> again to go back to Object mode."]},
+  {term:"Extrude", simple:"Pulls a face outward and builds new walls around it, so you grow new parts out of a shape.",
+   analogy:"Pulling clay out of a lump to make a handle on a mug.",
+   steps:["In Edit mode, select the top face of the cube.","Press <kbd>E</kbd> and move the mouse up. A new block grows out of the top.","Press <kbd>E</kbd> again, then <kbd>S</kbd> to scale the new face smaller. You've made a step.","Try making a simple tower in five extrudes."]},
+  {term:"Bevel", simple:"Rounds off sharp edges. Nothing in real life has a perfectly sharp edge, so bevels make objects look real.",
+   analogy:"Sanding the corners of a wooden table so they catch the light and don't hurt.",
+   steps:["In Edit mode, select an edge (press <kbd>2</kbd> first).","Press <kbd>Ctrl</kbd> + <kbd>B</kbd> and drag to round it.","Scroll the mouse wheel while dragging to add more segments for a smoother curve.","Render before and after. Notice how the bevelled edge catches light."]},
+  {term:"Loop cut", simple:"Slices a ring of new edges around your object, giving you more places to shape it.",
+   analogy:"Drawing a belt line around a clay figure so you can pinch in a waist.",
+   steps:["Hover over your object in Edit mode and press <kbd>Ctrl</kbd> + <kbd>R</kbd>.","A yellow line appears. Scroll to add more cuts, click twice to place.","Scale that new loop with <kbd>S</kbd> to pinch or bulge the shape."]}
+ ],
+ sessions:[["Tuesday","Watch the extrude video and copy along."],["Thursday","Practise bevel and loop cut on a fresh cube without the video."],["Weekend","Sketch a pen stand or phone stand on paper for 5 minutes, then model it."]],
+ win:"Your first original 3D object",
+ videos:[
+  {...yt("oF1UbZGtjrY"), title:"Getting started with the Extrude tool", note:"The single most-used modeling move."},
+  {...yt("tgt1PoCCcS4"), title:"Master the Bevel tool in 2 minutes", note:"Short and to the point."},
+  {...yt("dC0CZtsWllc"), title:"Blender basics: adding objects, extrude, bevel and more", note:"Good recap for Thursday."}
+ ]},
+
+{n:3, title:"Make it look real", idea:"Same object, three different outfits. Materials and light are what turn a grey model into something people want to buy.",
+ concepts:[
+  {term:"Material (Principled BSDF)", simple:"A material is the skin of an object: is it shiny, rough, metal, glass? Blender's main material is called Principled BSDF, which is just a fancy name for 'one material that can be almost anything'.",
+   analogy:"A paint shop with sliders. Instead of buying different paints, you slide 'shininess' and 'metalness' until it looks right.",
+   steps:["Select your stand and open the Material tab (red sphere icon on the right).","Click New. You now have a Principled BSDF.","For gold: Base Color to a warm yellow (around #FFC356), Metallic to 1, Roughness to about 0.2.","For matte black: Base Color near black, Metallic 0, Roughness 0.7."]},
+  {term:"Roughness", simple:"How blurry the reflections are. Low roughness is a mirror; high roughness is chalk.",
+   analogy:"A freshly polished car versus a dusty one. Same paint, different roughness.",
+   steps:["Keep the gold material and slide Roughness from 0 to 1 slowly.","Press <kbd>Z</kbd> and choose Rendered to see changes live.","Jewellery usually looks best between 0.1 and 0.3."]},
+  {term:"HDRI lighting", simple:"A 360° photo of a real place used as your light source. Your object gets lit and reflects as if it were really there.",
+   analogy:"Instead of setting up lamps in a studio, you teleport your object into a real room and borrow its light.",
+   steps:["Download a free HDRI from polyhaven.com (a studio one works great for products).","Open the World tab (red globe icon). Click the dot next to Color and choose Environment Texture.","Click Open and pick your HDRI file.","Render your gold stand. Notice the reflections suddenly look real."]},
+  {term:"Render engines: Eevee vs Cycles", simple:"Blender has two ways to render. Eevee is fast and good enough for previews. Cycles is slower but calculates real light bounces, which you need for gold and gems.",
+   analogy:"Eevee is a phone photo; Cycles is a DSLR shot. Use the phone to check, the DSLR for the final picture.",
+   steps:["Render tab (camera-back icon) › Render Engine › switch to Cycles.","If you have an NVIDIA GPU: Edit › Preferences › System › choose CUDA or OptiX, then set Device to GPU Compute.","Lower Samples to 128 if renders are slow."]}
+ ],
+ sessions:[["Tuesday","Watch the gold material video and make gold yourself."],["Thursday","Set up an HDRI and compare Eevee vs Cycles."],["Weekend","Render your stand three ways: gold, matte black and marble."]],
+ win:"Three renders and your first progress post",
+ videos:[
+  {...yt("Dg9kSzwoKEg"), title:"Create a gold material and a beautiful render", note:"Beginner-friendly, exactly what you need."},
+  {...yt("cvVm4ou7ByE"), title:"How to add an HDRI (quick realistic lighting)", note:"Short setup guide."},
+  {...yt("4bp2qDqlvI0"), title:"Glass material in Blender", note:"Useful practice before gems in week 5."}
+ ]},
+
+{n:4, title:"A simple ring", idea:"Your first portfolio piece. Sketch first: your drawing skill is the thing most 3D modelers don't have.",
+ concepts:[
+  {term:"Real-world units", simple:"Jewellery is tiny and precise. Setting Blender to millimetres means your ring could actually fit a real finger.",
+   analogy:"A tailor measuring in centimetres instead of guessing. Clients trust work that's built to real sizes.",
+   steps:["Scene tab (cone and sphere icon) › Units › Length: Millimeters, Unit Scale: 0.001.","An average ring has an inner diameter of about 17–18 mm and a band 2–3 mm wide.","Press <kbd>N</kbd> to open the side panel and type exact sizes into Dimensions."]},
+  {term:"Torus and Subdivision Surface", simple:"A torus is a donut shape, the perfect starting point for a band. Subdivision Surface is a modifier that smooths everything automatically.",
+   analogy:"Subdivision is like sanding a rough wooden carving: the shape stays, the blockiness disappears.",
+   steps:["<kbd>Shift</kbd> + <kbd>A</kbd> › Mesh › Torus. In the pop-up panel bottom-left, set the sizes.","Press <kbd>S</kbd> then <kbd>Z</kbd> to flatten it into a band shape.","Press <kbd>Ctrl</kbd> + <kbd>2</kbd> to add Subdivision Surface. Right-click › Shade Smooth.","Use loop cuts near edges to keep the band crisp where you want it."]},
+  {term:"Modifiers", simple:"Non-destructive effects stacked on an object. You can turn them off or change them any time without breaking your model.",
+   analogy:"Instagram filters for 3D. The original photo stays safe underneath.",
+   steps:["Open the Modifier tab (blue wrench icon).","Add Bevel modifier to soften all edges at once.","Try Array + Curve later to repeat a pattern around the band."]}
+ ],
+ sessions:[["Tuesday","Sketch three ring designs on paper and pick your favourite."],["Thursday","Set up millimetre units and model a plain band."],["Weekend","Add a pattern or texture to the band, then render it in gold with your HDRI."]],
+ win:"A gold ring render you'd proudly post",
+ videos:[
+  {...yt("kGJQQ045GBo"), title:"Model a solitaire ring with real-world measurements", note:"Covers units and sizes properly."},
+  {...yt("gTXsxWZNhUI"), title:"Pentagonal ring modeling tutorial", note:"A different ring shape for ideas."}
+ ]},
+
+{n:5, title:"A ring with a gemstone", idea:"Your heaviest lift so far. Gems are hard, which is exactly why a good gem render impresses clients.",
+ concepts:[
+  {term:"How gems use light", simple:"A diamond sparkles because light enters it, bends, bounces around inside and comes back out split into colours.",
+   analogy:"A disco ball inside a glass of water. Light goes in, bounces wildly, and flashes back at you.",
+   steps:["You don't need the physics. You need three settings: Transmission, IOR and Cycles.","Cycles must be on. Eevee can't show real gem sparkle."]},
+  {term:"IOR (Index of Refraction)", simple:"A number for how much a material bends light. Water is 1.33, glass about 1.45, diamond 2.42.",
+   analogy:"How bent a straw looks in a glass. A higher number means a stronger bend.",
+   steps:["Make a new material on your gem.","Set Transmission Weight to 1 (it becomes see-through).","Set Roughness to 0 and IOR to 2.42 for diamond.","Tint Base Color slightly for ruby, emerald or sapphire."]},
+  {term:"Gem cut shape", simple:"The gem's shape decides how it sparkles. A simple round cut can be built from a cylinder with a pointed bottom.",
+   analogy:"Cutting a gem is like folding paper: each flat face catches light differently.",
+   steps:["<kbd>Shift</kbd> + <kbd>A</kbd> › Cylinder with 16 vertices.","In Edit mode, select the bottom face and scale it to a point (<kbd>S</kbd> then <kbd>0</kbd>).","Scale the top face slightly smaller to make the flat top (the table).","Keep it Shade Flat, not smooth: the facets are the sparkle."]}
+ ],
+ sessions:[["Tuesday","Watch a diamond material video and copy along."],["Thursday","Build a simple round gem from a cylinder by yourself."],["Weekend","Set the gem into your ring, render on a clean background."]],
+ win:"Your hardest piece so far, posted",
+ videos:[
+  {...yt("V-wY6viC_0k"), title:"Easy diamonds and gems for beginners", note:"Start here."},
+  {...yt("dhNUX_78TnA"), title:"How to make diamonds and gemstones", note:"Another approach for comparison."}
+ ]},
+
+{n:6, title:"A printable planter or vase", deload:true, idea:"Deload week. Lighter, more playful, and it gives you your side-track product: something you can hold in your hands.",
+ concepts:[
+  {term:"Spin from a profile", simple:"Draw half the outline of a vase, then let Blender spin it 360° to make the full shape. This is where your drawing hand shines.",
+   analogy:"A potter's wheel. You shape one side with your hand and the wheel makes it round.",
+   steps:["Add a single vertex or plane, enter Edit mode and draw the side outline with <kbd>E</kbd> point by point.","Add a Screw modifier (Modifier tab › Generate › Screw) to spin it around.","Adjust the outline points and watch the vase change live."]},
+  {term:"Wall thickness (Solidify)", simple:"A printer needs walls with real thickness. The Solidify modifier gives your thin surface a solid wall.",
+   analogy:"A paper cup versus a clay mug. Paper is too thin to print; the mug wall has body.",
+   steps:["Add a Solidify modifier.","Set Thickness to about 2 mm for a sturdy planter.","Make sure the bottom is closed so soil and water stay in."]},
+  {term:"Watertight (manifold)", simple:"A model with no holes or stray bits anywhere. A printer can't understand a model with gaps.",
+   analogy:"A balloon. If there's even one tiny hole, it won't hold air.",
+   steps:["Get the 3D Print Toolbox extension (Edit › Preferences › Get Extensions, search '3D Print').","Press <kbd>N</kbd> › 3D-Print tab › Check All. Fix anything it flags.","Apply all modifiers (Ctrl+A on each) before exporting."]},
+  {term:"STL file", simple:"The file format a 3D printer reads. It's the blueprint for a physical object.",
+   analogy:"A sewing pattern. The tailor (printer) needs it to make the actual dress.",
+   steps:["File › Export › STL.","Tick Selection Only so only the vase exports.","Keep the file safe: it goes to a print shop in week 10."]}
+ ],
+ sessions:[["Tuesday","Watch the vase video and learn what makes a model watertight."],["Thursday","Sketch a planter in your own style."],["Weekend","Model it, check it with the 3D Print Toolbox and export an STL."]],
+ win:"A design ready to print",
+ videos:[
+  {...yt("D0EfmGvR7Ag"), title:"Design unique vases in Blender for 3D printing", note:"Exactly this week's project."},
+  {...yt("beAfWDEdjCc"), title:"Make any model manifold: 3D Print Toolbox guide", note:"How to fix holes before printing."},
+  {...yt("ROwdFy7HbA0"), title:"How to export STL from Blender", note:"Short and practical."}
+ ]},
+
+{n:7, title:"Your ring in a browser", idea:"Home ground. You already know React; now React learns to show 3D. This should feel easier than Blender.",
+ concepts:[
+  {term:"GLB / glTF", simple:"The standard file for 3D on the web. GLB is the single-file version that packs model, materials and textures together.",
+   analogy:"The JPEG of 3D: small, works everywhere, every browser understands it.",
+   steps:["In Blender, select your ring. File › Export › glTF 2.0.","Format: glTF Binary (.glb). Tick Selection Only.","Gem materials don't carry over perfectly. That's normal; you'll restyle in code."]},
+  {term:"Compression", simple:"Making the file smaller so it loads fast, especially on phones over mobile data.",
+   analogy:"Vacuum-packing clothes for a trip: same clothes, a fraction of the space.",
+   steps:["In your terminal: <kbd>npx gltfjsx ring.glb --transform</kbd>","This compresses the model and also writes a React component for it.","Aim for under 1–2 MB. Check the file size before and after."]},
+  {term:"React Three Fiber", simple:"A library that lets you write 3D scenes as React components. Under the hood it uses Three.js, the main 3D engine for the web.",
+   analogy:"Three.js is the engine; React Three Fiber is the steering wheel shaped like the React you already know.",
+   steps:["<kbd>npm create vite@latest ring-viewer -- --template react</kbd>","<kbd>npm i three @react-three/fiber @react-three/drei</kbd>","Drei is a helper kit: ready-made camera controls, lighting and loaders.","Use the snippet below as your first scene."],
+   code:`import { Canvas } from "@react-three/fiber";
+import { OrbitControls, Environment, useGLTF } from "@react-three/drei";
+
+function Ring() {
+  const { scene } = useGLTF("/ring-transformed.glb"); // load the model
+  return <primitive object={scene} />;
+}
+
+export default function App() {
+  return (
+    <Canvas camera={{ position: [0, 0, 3] }}>
+      <Environment preset="studio" />   {/* HDRI lighting, like week 3 */}
+      <Ring />
+      <OrbitControls />                 {/* drag to rotate, scroll to zoom */}
+    </Canvas>
+  );
+}`}
+ ],
+ sessions:[["Tuesday","Watch the React Three Fiber crash course."],["Thursday","Set up a Vite project and show a plain spinning cube."],["Weekend","Export your ring as GLB, compress it and show it with mouse rotation."]],
+ win:"Your own 3D model running on your own website",
+ videos:[
+  {...yt("jKy2Rm7EVOk"), title:"React Three Fiber crash course for beginners", note:"Your main lesson this week."},
+  {...yt("tBSbgRRpNzI"), title:"Showcase your 3D model with R3F, Drei and gltfjsx", note:"Blender model to website, end to end."},
+  {...yt("J3zQd_PRJC8"), title:"Loading models and the primitive component", note:"If your model won't show up, watch this."}
+ ]},
+
+{n:8, title:"Make it interactive", idea:"Turn a nice demo into something a shop owner would want on their site: let shoppers choose the metal.",
+ concepts:[
+  {term:"Changing material with state", simple:"Keep the chosen metal in React state, and pass its colour to the ring's material. Clicking a button changes state, and the ring repaints.",
+   analogy:"A car showroom app: tap 'red', the car turns red. Same car, different paint.",
+   steps:["Store metal colours: gold #D4AF37, silver #C0C0C0, rose gold #B76E79.","Use a <kbd>meshStandardMaterial</kbd> with metalness 1 and roughness about 0.2.","Buttons call setMetal() and the ring updates instantly."],
+   code:`const METALS = { gold: "#D4AF37", silver: "#C0C0C0", rose: "#B76E79" };
+
+function Ring({ color }) {
+  const { nodes } = useGLTF("/ring-transformed.glb");
+  return (
+    <mesh geometry={nodes.Ring.geometry}>
+      <meshStandardMaterial color={color} metalness={1} roughness={0.2} />
+    </mesh>
+  );
+}
+// In App: const [metal, setMetal] = useState("gold");
+// <Ring color={METALS[metal]} />  and three buttons calling setMetal`},
+  {term:"Testing on a real phone", simple:"Your laptop is a sports car; your customer's phone is a scooter in traffic. Test where they actually are.",
+   analogy:"Tasting food the way the customer will eat it, not straight from the pan.",
+   steps:["Run <kbd>npm run dev -- --host</kbd> and open the Network URL on your phone (same Wi-Fi).","Turn Wi-Fi off and test on mobile data later, once deployed.","If it's slow: shrink textures, reduce polygons, compress again."]}
+ ],
+ sessions:[["Tuesday","Watch a configurator tutorial."],["Thursday","Add gold, silver and rose gold buttons."],["Weekend","Test on your phone and fix anything slow or awkward."]],
+ win:"A demo a jewellery shop owner would want on their site",
+ videos:[
+  {...yt("LNvn66zJyKs"), title:"React Three Fiber tutorial: 3D product configurator", note:"The pattern you're building, start to finish."},
+  {...yt("2jwqotdQmdQ"), title:"Build a product customizer with GLTF models", note:"Another take on changing colours per part."}
+ ]},
+
+{n:9, title:"Portfolio site", deload:true, idea:"Deload week, and the easiest one for you: a simple site, the kind of thing you've deployed before.",
+ concepts:[
+  {term:"What goes in a portfolio", simple:"Four or five best pieces, one live interactive demo, a one-line About, and a way to contact you. Less is stronger.",
+   analogy:"A restaurant menu with six great dishes beats one with sixty average ones.",
+   steps:["Pick your 4–5 best renders. Drop anything you're not proud of.","Put the interactive ring viewer front and centre.","One line about you: 'I make 3D product visuals for jewellery and decor brands.'","Add an email and Instagram link."]},
+  {term:"Deploying", simple:"Putting your site on the internet with a public link. Vercel does it free for React apps.",
+   analogy:"Moving your shop from your garage to a street with an address people can visit.",
+   steps:["Push the project to GitHub.","Import it on vercel.com. It detects Vite automatically.","You get a link in under a minute. Send it to a friend and ask what's confusing."]}
+ ],
+ sessions:[["Tuesday","Choose your best 4–5 pieces."],["Thursday","Build the simple page layout."],["Weekend","Deploy and test the link on your phone."]],
+ win:"One link you can send to anyone",
+ videos:[]},
+
+{n:10, title:"Hold your design in your hands", idea:"Turn a file into a thing. You'll learn more from one real print than from ten tutorials.",
+ concepts:[
+  {term:"Print services instead of buying a printer", simple:"Local shops print your STL for a fee. You test demand before spending on a machine.",
+   analogy:"Renting a car for a weekend before deciding to buy one.",
+   steps:["Search for 3D printing services in Gurugram or Delhi NCR.","Send your STL and ask for PLA, the common, cheap plant-based plastic.","Ask the price and time. Note it: this is your real cost per piece."]},
+  {term:"Product photos", simple:"A real photo of a real product builds trust that renders alone can't.",
+   analogy:"A dating profile with real photos versus filtered ones. People trust real.",
+   steps:["Shoot near a window in daylight on a plain background.","Add a plant or pens so people see it in use.","Post it with a simple question: 'Would you buy this? What price feels fair?'"]}
+ ],
+ sessions:[["Tuesday","Find two or three print services and get quotes."],["Thursday","Send your STL for printing."],["Weekend","Photograph the print and post it."]],
+ win:"Your first physical product",
+ videos:[]},
+
+{n:11, title:"Make a concept for a real brand", idea:"Clients buy what they can picture on their own shop. Show them their world, not just your portfolio.",
+ concepts:[
+  {term:"Finding the right brands", simple:"Small jewellery and decor sellers on Instagram with flat, plain product photos. They're the ones who'd notice the jump to 3D.",
+   analogy:"A tailor walking past people in ill-fitting suits. They're the ones who need you.",
+   steps:["Make a simple list of 20 brands: name, link, what they sell, what their photos lack.","Prefer brands that post regularly: they care about how they look.","Skip big brands with agencies already."]},
+  {term:"A concept piece", simple:"A 3D version of something similar to what they sell, made to show what's possible. It's a sample, not their official product.",
+   analogy:"A free taste at a sweet shop. One bite and they want the box.",
+   steps:["Pick one brand from your list.","Model a piece in their style. Don't copy their exact design or use their logo.","Put it in your viewer with metal switching. Label it clearly as a concept."]}
+ ],
+ sessions:[["Tuesday","List 10 brands."],["Thursday","List 10 more and pick one."],["Weekend","Build their concept piece in your viewer."]],
+ win:"One custom concept to show",
+ videos:[]},
+
+{n:12, title:"Start talking", idea:"The scariest week and the most important. Sales are a bonus; real conversations are the prize.",
+ concepts:[
+  {term:"A short outreach message", simple:"Three lines: who you are, what you made for them, and a small, easy next step.",
+   analogy:"Asking someone to try a free sample, not to marry you.",
+   steps:["Example: 'Hi! I make interactive 3D product views for jewellery brands. I made a concept inspired by your style, here's the link. Happy to chat if it's useful.'","Send 5 messages this week, no more. Quality over quantity.","Don't chase hard. One gentle follow-up after 5 days is enough."]},
+  {term:"Gig platforms", simple:"Fiverr and Upwork let clients find you. Your portfolio link does most of the selling.",
+   analogy:"Putting your shop in a market where buyers are already walking around.",
+   steps:["Make one focused gig: '3D product models and web viewers for jewellery and decor'.","Use your best ring render as the cover image.","Link your portfolio site and the interactive demo."]}
+ ],
+ sessions:[["Tuesday","Write and send 2 messages."],["Thursday","Send 3 more."],["Weekend","Set up a Fiverr or Upwork profile."]],
+ win:"Your first conversations with potential clients",
+ videos:[]}
+];
+
+const GLOSSARY = [
+ ["Blender","Free 3D software. Photoshop, but for 3D objects."],
+ ["Viewport","The window you look into the 3D world through."],
+ ["Render","The computer turning your 3D scene into a finished picture."],
+ ["Edit mode","The mode where you reshape an object's points, edges and faces."],
+ ["Extrude","Pulling part of a shape outward to grow a new part, like pulling clay."],
+ ["Bevel","Rounding sharp edges so objects look real."],
+ ["Modifier","A reversible effect on an object, like a filter on a photo."],
+ ["Material","The skin of an object: gold, glass, plastic, marble."],
+ ["Roughness","How blurry reflections are. Low is a mirror, high is chalk."],
+ ["HDRI","A 360° photo used as lighting, so your object looks like it's in a real place."],
+ ["Cycles / Eevee","Blender's two render engines. Eevee is quick previews, Cycles is realistic light."],
+ ["IOR","How much a material bends light. Diamond bends a lot (2.42)."],
+ ["Watertight","A model with no holes, like a balloon with no leaks. Printers need this."],
+ ["STL","The file a 3D printer reads. The sewing pattern for a print."],
+ ["PLA","The common, cheap, plant-based plastic most printers use."],
+ ["GLB / glTF","The file for 3D on websites. The JPEG of 3D."],
+ ["Three.js","The main 3D engine for websites."],
+ ["React Three Fiber","React components that drive Three.js, so 3D feels like normal React."],
+ ["Drei","A helper kit for React Three Fiber: controls, lighting, loaders."],
+ ["Deload","A planned easy week so you recover and don't burn out."]
+];
+
+/* ---------- State (saved in this browser) ---------- */
+const KEY = "workbench-v1";
+let state = {current:1, done:{}, sessions:{}, tried:{}, notes:{}, step:{}};
+try{ const s = JSON.parse(localStorage.getItem(KEY)); if(s) state = Object.assign(state, s); }catch(e){}
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+
+/* ---------- Theme ---------- */
+try{ const t = localStorage.getItem(KEY+"-theme"); if(t) document.documentElement.dataset.theme = t; }catch(e){}
+document.getElementById("themeBtn").onclick = () => {
+  const dark = getComputedStyle(document.documentElement).getPropertyValue("--paper").trim().toLowerCase() === "#141920";
+  const next = dark ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  try{ localStorage.setItem(KEY+"-theme", next); }catch(e){}
+  ringColors && ringColors();
+};
+
+/* ---------- Rendering ---------- */
+const rail = document.getElementById("rail"), main = document.getElementById("main");
+const esc = s => s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function renderRail(){
+  let html = "";
+  PHASES.forEach(p => {
+    html += `<div class="phase"><h2>${p.name}</h2>`;
+    p.weeks.forEach(n => {
+      const w = WEEKS[n-1];
+      html += `<button type="button" class="week-btn ${state.done[n]?"done":""}" data-week="${n}" aria-current="${state.current===n}">
+        <span class="dot">${state.done[n]?"✓":n}</span><span class="label">${esc(w.title)}</span>${w.deload?'<span class="tag">easy</span>':""}</button>`;
+    });
+    html += `</div>`;
+  });
+  html += `<div class="rail-extra"><button type="button" class="week-btn glossary-btn" data-week="g" aria-current="${state.current==="g"}">
+    <span class="dot">?</span><span class="label">Glossary</span></button></div>`;
+  rail.innerHTML = html;
+  rail.querySelectorAll(".week-btn").forEach(b => b.onclick = () => {
+    state.current = b.dataset.week === "g" ? "g" : +b.dataset.week; save(); renderAll();
+    main.focus({preventScroll:true}); if (window.innerWidth < 860) main.scrollIntoView({behavior:"smooth", block:"start"});
+  });
+  const cur = rail.querySelector('[aria-current="true"]'); if (cur && window.innerWidth < 860) cur.scrollIntoView({inline:"center", block:"nearest"});
+}
+
+function renderMeter(){
+  const count = Object.values(state.done).filter(Boolean).length;
+  document.getElementById("meterFill").style.width = (count/12*100)+"%";
+  document.getElementById("meterText").textContent = `${count} of 12`;
+  setRingProgress(count/12);
+}
+
+function renderGlossary(){
+  main.innerHTML = `<section class="panel"><p class="kicker">Reference</p><h2 class="week-title">Glossary in plain words</h2>
+    <table><thead><tr><th scope="col">Term</th><th scope="col">What it means</th></tr></thead><tbody>
+    ${GLOSSARY.map(([t,d])=>`<tr><td>${t}</td><td>${d}</td></tr>`).join("")}</tbody></table></section>`;
+}
+
+function videoCard(v){
+  const href = v.url || `https://www.youtube.com/watch?v=${v.id}`;
+  const thumb = v.id ? `<div class="thumb" style="background-image:url('https://i.ytimg.com/vi/${v.id}/hqdefault.jpg')"></div>`
+                     : `<div class="thumb"><span class="pl">Playlist</span></div>`;
+  return `<a class="video" href="${href}" target="_blank" rel="noopener">${thumb}<div class="vt">${esc(v.title)}</div><div class="vn">${esc(v.note)}</div></a>`;
+}
+
+function renderWeek(){
+  const w = WEEKS[state.current-1], n = w.n;
+  const step = Math.min(state.step[n]||0, w.concepts.length-1);
+  const c = w.concepts[step];
+  const triedKey = n+"-"+step;
+  const sess = state.sessions[n] || {};
+  main.innerHTML = `
+  <section class="panel">
+    <p class="kicker">Week ${n} of 12${w.deload?" · easy week":""}</p>
+    <h2 class="week-title">${esc(w.title)}</h2>
+    <p class="idea">${esc(w.idea)}</p>
+  </section>
+
+  <section class="panel" aria-labelledby="learnH">
+    <div class="stepper-head">
+      <h3 id="learnH" style="margin:0">Learn one idea at a time</h3>
+      <div class="pips" role="group" aria-label="Ideas this week">
+        ${w.concepts.map((x,i)=>`<button type="button" class="pip ${state.tried[n+"-"+i]?"seen":""}" data-i="${i}" aria-current="${i===step}" aria-label="Idea ${i+1}: ${esc(x.term)}"></button>`).join("")}
+      </div>
+    </div>
+    <article class="concept">
+      <p class="kicker">Idea ${step+1} of ${w.concepts.length}</p>
+      <h4>${esc(c.term)}</h4>
+      <p class="simple">${esc(c.simple)}</p>
+      <div class="analogy"><strong>Think of it like</strong><span>${esc(c.analogy)}</span></div>
+      <div class="try"><h5>${n<=6?"Try it in Blender":n<=9?"Try it in your code editor":"Try it this week"}</h5>
+        <ol>${c.steps.map(s=>`<li>${s}</li>`).join("")}</ol>
+        ${c.code?`<pre><code>${esc(c.code)}</code></pre>`:""}
+      </div>
+    </article>
+    <div class="stepper-nav">
+      <button type="button" class="btn" id="prevBtn" ${step===0?"disabled":""}>Previous idea</button>
+      <label class="tried"><input type="checkbox" id="triedBox" ${state.tried[triedKey]?"checked":""}> I tried this</label>
+      <button type="button" class="btn primary" id="nextBtn" ${step===w.concepts.length-1?"disabled":""}>Next idea</button>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="sessH">
+    <h3 id="sessH">This week's sessions</h3>
+    <ul class="sessions">
+      ${w.sessions.map(([d,t],i)=>`<li><label class="check"><input type="checkbox" data-s="${i}" ${sess[i]?"checked":""}><span class="when">${d}</span><span>${esc(t)}</span></label></li>`).join("")}
+      <li><label class="check win"><input type="checkbox" id="winBox" ${state.done[n]?"checked":""}><span class="when">Week's win</span><span>${esc(w.win)}</span></label></li>
+    </ul>
+  </section>
+
+  ${w.videos.length?`<section class="panel" aria-labelledby="vidH">
+    <h3 id="vidH">Watch a real person do it</h3>
+    <p class="note-help">Opens on YouTube. Watch once, then try it yourself without the video.</p>
+    <div class="videos">${w.videos.map(videoCard).join("")}</div>
+  </section>`:""}
+
+  <section class="panel" aria-labelledby="noteH">
+    <h3 id="noteH">Your notes</h3>
+    <p class="note-help">Write what clicked, what confused you and shortcuts you keep forgetting. Writing it yourself is how it sticks.</p>
+    <textarea id="notes" aria-labelledby="noteH" placeholder="e.g. Ctrl+B is bevel. Scroll while bevelling for smoother edges.">${esc(state.notes[n]||"")}</textarea>
+    <div class="saved" id="savedMsg" aria-live="polite"></div>
+  </section>
+
+  <div class="week-foot">
+    ${n>1?`<button type="button" class="btn" data-go="${n-1}">Week ${n-1}</button>`:"<span></span>"}
+    ${n<12?`<button type="button" class="btn primary" data-go="${n+1}">Go to week ${n+1}</button>`:""}
+  </div>`;
+
+  const setStep = i => { state.step[n] = i; save(); renderWeek(); document.getElementById("learnH").scrollIntoView({block:"nearest"}); };
+  main.querySelectorAll(".pip").forEach(p => p.onclick = () => setStep(+p.dataset.i));
+  document.getElementById("prevBtn").onclick = () => setStep(step-1);
+  document.getElementById("nextBtn").onclick = () => setStep(step+1);
+  document.getElementById("triedBox").onchange = e => { state.tried[triedKey] = e.target.checked; save(); main.querySelector(`.pip[data-i="${step}"]`).classList.toggle("seen", e.target.checked); };
+  main.querySelectorAll("[data-s]").forEach(b => b.onchange = e => { state.sessions[n] = Object.assign({}, state.sessions[n], {[b.dataset.s]: e.target.checked}); save(); });
+  document.getElementById("winBox").onchange = e => { state.done[n] = e.target.checked; save(); renderRail(); renderMeter(); };
+  let t; document.getElementById("notes").oninput = e => { state.notes[n] = e.target.value; clearTimeout(t); t = setTimeout(()=>{ save(); document.getElementById("savedMsg").textContent = "Saved in this browser"; }, 400); };
+  main.querySelectorAll("[data-go]").forEach(b => b.onclick = () => { state.current = +b.dataset.go; save(); renderAll(); window.scrollTo({top:0, behavior:"smooth"}); });
+}
+
+function renderAll(){ renderRail(); renderMeter(); state.current === "g" ? renderGlossary() : renderWeek(); }
+main.tabIndex = -1;
+
+/* ---------- The ring: wireframe at 0%, solid gold at 100% ---------- */
+let setRingProgress = () => {}, ringColors = null;
+(function(){
+  const stage = document.getElementById("ringStage");
+  if (!window.THREE) { document.getElementById("ringCaption").textContent = ""; return; }
+  let renderer;
+  try { renderer = new THREE.WebGLRenderer({antialias:true, alpha:true}); } catch(e) { document.getElementById("ringCaption").textContent = ""; return; }
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  stage.prepend(renderer.domElement);
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 100);
+  camera.position.set(0, 0.6, 6.2);
+  camera.lookAt(0, 0, 0);
+
+  const group = new THREE.Group(); scene.add(group);
+  const band = new THREE.TorusGeometry(1.25, 0.2, 40, 120);
+  const wireMat = new THREE.MeshBasicMaterial({wireframe:true, transparent:true});
+  const goldMat = new THREE.MeshStandardMaterial({color:0xD4AF37, metalness:1, roughness:0.22, transparent:true});
+  const wire = new THREE.Mesh(new THREE.TorusGeometry(1.25, 0.2, 14, 48), wireMat);
+  const solid = new THREE.Mesh(band, goldMat);
+  const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.34, 0),
+    new THREE.MeshStandardMaterial({color:0xBFEFF0, metalness:0.1, roughness:0.05, transparent:true, flatShading:true}));
+  gem.position.set(0, 1.5, 0); gem.scale.set(1, 1.2, 1);
+  const gemWire = new THREE.Mesh(gem.geometry, wireMat); gemWire.position.copy(gem.position); gemWire.scale.copy(gem.scale);
+  group.add(wire, solid, gem, gemWire);
+  group.rotation.x = 0.35;
+
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x445566, 0.9));
+  const key = new THREE.DirectionalLight(0xffffff, 1.6); key.position.set(3, 4, 5); scene.add(key);
+  const rim = new THREE.DirectionalLight(0xffe2a8, 1.1); rim.position.set(-4, -1, -3); scene.add(rim);
+  const pt = new THREE.PointLight(0xffffff, 0.8); pt.position.set(0, 2.5, 2.5); scene.add(pt);
+
+  ringColors = () => { wireMat.color.set(getComputedStyle(document.documentElement).getPropertyValue("--muted").trim() || "#5A6676"); };
+  ringColors();
+
+  setRingProgress = p => {
+    solid.material.opacity = 0.08 + p * 0.92;
+    wireMat.opacity = 1 - p * 0.85;
+    gem.material.opacity = p >= 1 ? 0.95 : p * 0.6;
+    document.getElementById("ringCaption").textContent =
+      p === 0 ? "Your ring turns to gold as you finish weeks" : p >= 1 ? "Finished. Go sell some rings." : "Taking shape";
+  };
+
+  function size(){ const w = stage.clientWidth, h = stage.clientHeight - 24; renderer.setSize(w, h, false); camera.aspect = w/h; camera.updateProjectionMatrix(); }
+  new ResizeObserver(size).observe(stage); size();
+  const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function tick(){ group.rotation.y += 0.006; renderer.render(scene, camera); requestAnimationFrame(tick); }
+  if (still) { group.rotation.y = 0.6; const loop = () => { renderer.render(scene, camera); setTimeout(()=>requestAnimationFrame(loop), 500); }; loop(); }
+  else tick();
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", ringColors);
+})();
+
+renderAll();
+</script>
+</body>
+</html>
